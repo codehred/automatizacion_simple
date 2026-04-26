@@ -1,30 +1,25 @@
-# importar la función By de selenium.webdriver.common.by,
-# misma que permite seleccionar elementos de una página web
-# por medio de selectores CSS.
-from selenium.webdriver.common.by import By
+import requests
+from bs4 import BeautifulSoup
 
-# Función para obtener el precio de una acción
-# Parámetros:
-# - driver: objeto de Selenium WebDriver
-# - consulta: cadena de texto que contiene la consulta del usuario
-def obtener_precio_accion(driver, consulta):
-    # Buscar el precio de una acción en Google
-    driver.get(f"https://www.google.com/search?q=precio+acción+{consulta}")
-
-    # Bloque try-except para manejar errores
+def obtener_precio_accion(consulta):
     try:
-        # Obtener el nombre completo de la emprea
-        empresa = driver.find_element(By.CSS_SELECTOR, "div[class='PZPZlf ssJ7i B5dxMb']").text
+        # Extraer solo el ticker
+        ticker = consulta.replace("precio", "").replace("accion", "").replace("valor", "").strip().upper()
 
-        # Obtener el precio de la acción
-        precio = driver.find_element(By.CSS_SELECTOR, "span[jsname='vWLAgc']").text
+        url = f"https://finance.yahoo.com/quote/{ticker}"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
 
-        # Obtener la divisa de la acción
-        divisa = 
+        precio = soup.find("fin-streamer", {"data-field": "regularMarketPrice"})
+        nombre = soup.find("h1", {"class": "yf-3a2v0c"})
 
-        # Obtener el ticker de la acción. Éste es el código que se usa para identificar la acción en la bolsa. Por ejemplo, el ticker de Apple es AAPL.
-        ticker = 
-        
-        return f"{empresa} [{ticker}]  ${precio} {divisa.upper()}."
+        if not precio:
+            return f"No se encontró el precio de {ticker}. Verifica que el ticker sea correcto."
+
+        nombre_texto = nombre.text.strip() if nombre else ticker
+
+        return f"{nombre_texto} [{ticker}]: ${precio.text.strip()} USD"
+
     except Exception as e:
-        return "No se pudo obtener el precio de la acción en este momento."
+        return f"Error al obtener el precio: {e}"
